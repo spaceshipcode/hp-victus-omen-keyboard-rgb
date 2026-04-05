@@ -1,0 +1,13 @@
+[Unit]
+Description=KDE Keyboard Brightness Monitor for HP Victus
+After=graphical.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/salih/İndirilenler/klavye_aydınlatması/kde_brightness_monitor.py
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,3 @@
+# HP Victus Keyboard Backlight Permissions
+# Allows KDE Plasma and other userspace tools to control brightness and color without sudo
+SUBSYSTEM=="leds", KERNEL=="hp::kbd_backlight", ACTION=="add|change", RUN+="/bin/sh -c 'chmod a+w /sys/class/leds/%k/brightness /sys/class/leds/%k/multi_intensity'"
