@@ -245,8 +245,17 @@ mkdir -p "$INSTALL_PREFIX"
 cp "${SCRIPT_DIR}/kbd_backlight.py" "$INSTALL_PREFIX/"
 cp "${SCRIPT_DIR}/kde_brightness_monitor.py" "$INSTALL_PREFIX/"
 
-# Copy icon if present
-[[ -f "${SCRIPT_DIR}/icon.png" ]] && cp "${SCRIPT_DIR}/icon.png" "$INSTALL_PREFIX/"
+# Icon installation for Wayland compatibility
+step "Installing Icon into Theme"
+ICON_NAME="io.github.spaceshipcode.kbd-backlight"
+ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
+mkdir -p "$ICON_DIR"
+
+if [[ -f "${SCRIPT_DIR}/${ICON_NAME}.png" ]]; then
+    cp "${SCRIPT_DIR}/${ICON_NAME}.png" "$ICON_DIR/${ICON_NAME}.png"
+    cp "${SCRIPT_DIR}/${ICON_NAME}.png" "$INSTALL_PREFIX/${ICON_NAME}.png"
+    success "Icon installed to icon theme: $ICON_DIR/${ICON_NAME}.png"
+fi
 
 # Create a launcher in ~/.local/bin
 mkdir -p "${HOME}/.local/bin"
@@ -263,11 +272,9 @@ step "Creating Desktop Entry"
 
 DESKTOP_DIR="${HOME}/.local/share/applications"
 mkdir -p "$DESKTOP_DIR"
+ICON_NAME="io.github.spaceshipcode.kbd-backlight"
 
-ICON_PATH=""
-[[ -f "$INSTALL_PREFIX/icon.png" ]] && ICON_PATH="$INSTALL_PREFIX/icon.png" || ICON_PATH="input-keyboard"
-
-cat > "${DESKTOP_DIR}/kbd-backlight.desktop" << EOF
+cat > "${DESKTOP_DIR}/${ICON_NAME}.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -275,14 +282,15 @@ Name=Keyboard Backlight
 GenericName=RGB Keyboard Control
 Comment=HP Victus / OMEN keyboard RGB backlight control
 Exec=${HOME}/.local/bin/kbd-backlight
-Icon=${ICON_PATH}
+Icon=${ICON_NAME}
 Terminal=false
 Categories=Settings;HardwareSettings;
 Keywords=keyboard;backlight;rgb;hp;victus;omen;
 StartupNotify=true
+X-GNOME-UsesNotifications=true
 EOF
 
-success "Desktop entry created."
+success "Desktop entry created: ${DESKTOP_DIR}/${ICON_NAME}.desktop"
 
 # ── Optional: KDE brightness monitor service ──────────────────────────────────
 step "KDE Brightness Monitor (Optional)"
