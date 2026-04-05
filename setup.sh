@@ -248,13 +248,30 @@ cp "${SCRIPT_DIR}/kde_brightness_monitor.py" "$INSTALL_PREFIX/"
 # Icon installation for Wayland compatibility
 step "Installing Icon into Theme"
 ICON_NAME="io.github.spaceshipcode.kbd-backlight"
-ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
-mkdir -p "$ICON_DIR"
+HICOLOR_DIR="${HOME}/.local/share/icons/hicolor"
+mkdir -p "$HICOLOR_DIR/512x512/apps"
+mkdir -p "$HICOLOR_DIR/scalable/apps"
 
-if [[ -f "${SCRIPT_DIR}/${ICON_NAME}.png" ]]; then
-    cp "${SCRIPT_DIR}/${ICON_NAME}.png" "$ICON_DIR/${ICON_NAME}.png"
-    cp "${SCRIPT_DIR}/${ICON_NAME}.png" "$INSTALL_PREFIX/${ICON_NAME}.png"
-    success "Icon installed to icon theme: $ICON_DIR/${ICON_NAME}.png"
+# Find source icon (try new ID name first, then fallback to icon.png)
+SRC_ICON=""
+[[ -f "${SCRIPT_DIR}/${ICON_NAME}.png" ]] && SRC_ICON="${SCRIPT_DIR}/${ICON_NAME}.png"
+[[ -z "$SRC_ICON" && -f "${SCRIPT_DIR}/icon.png" ]] && SRC_ICON="${SCRIPT_DIR}/icon.png"
+
+if [[ -n "$SRC_ICON" ]]; then
+    # Install to various hicolor folders
+    cp "$SRC_ICON" "$HICOLOR_DIR/512x512/apps/${ICON_NAME}.png"
+    cp "$SRC_ICON" "$HICOLOR_DIR/scalable/apps/${ICON_NAME}.png"
+    # Also keep a local copy
+    cp "$SRC_ICON" "$INSTALL_PREFIX/${ICON_NAME}.png"
+    success "Icon installed to icon theme: $ICON_NAME"
+    
+    # Refresh caches
+    gtk-update-icon-cache -f "$HICOLOR_DIR" &>/dev/null || true
+    if command -v kbuildsycoca5 &>/dev/null; then
+        kbuildsycoca5 &>/dev/null || true
+    elif command -v kbuildsycoca6 &>/dev/null; then
+        kbuildsycoca6 &>/dev/null || true
+    fi
 fi
 
 # Create a launcher in ~/.local/bin
@@ -287,6 +304,7 @@ Terminal=false
 Categories=Settings;HardwareSettings;
 Keywords=keyboard;backlight;rgb;hp;victus;omen;
 StartupNotify=true
+StartupWMClass=${ICON_NAME}
 X-GNOME-UsesNotifications=true
 EOF
 

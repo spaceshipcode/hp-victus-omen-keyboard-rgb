@@ -78,8 +78,7 @@ HARDWARE_FOUND = LED_PATH is not None or TEST_MODE
 
 # Application directory
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-ICON_NAME = "io.github.spaceshipcode.kbd-backlight"
-ICON_PATH = os.path.join(APP_DIR, f"{ICON_NAME}.png")
+ICON_PATH = os.path.join(APP_DIR, "icon.png")
 
 # Helper script path (In the same folder as the Python file)
 HELPER_SCRIPT = "/usr/local/bin/kbd_helper.sh"
@@ -257,13 +256,7 @@ class KeyboardBacklightApp(Adw.Application):
     
     def on_activate(self, app):
         """Create the main window when the application is activated."""
-        # Ensure the icon is found when running from the folder
-        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-        if APP_DIR not in icon_theme.get_search_path():
-            icon_theme.add_search_path(APP_DIR)
-            
         self.win = Adw.ApplicationWindow(application=app)
-        self.win.set_icon_name("io.github.spaceshipcode.kbd-backlight")
         self.win.set_title("Keyboard Backlight")
         self.win.set_default_size(300, 520)
         self.win.set_resizable(False)
