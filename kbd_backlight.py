@@ -482,10 +482,13 @@ class KeyboardBacklightApp(Adw.Application):
         
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data(
-            f"box {{ background-color: rgb({r}, {g}, {b}); border-radius: 8px; }}".encode()
+            f"#preview_box {{ background-color: rgb({r}, {g}, {b}); border-radius: 8px; }}".encode()
         )
-        self.preview_box.get_style_context().add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
+        self.preview_box.set_name("preview_box")
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER
         )
         
         self.rgb_label.set_text(f"RGB: {r}, {g}, {b}")

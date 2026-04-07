@@ -36,7 +36,7 @@ echo "  ██║  ██║██║         ██║  ██╗████�
 echo "  ╚═╝  ╚═╝╚═╝         ╚═╝  ╚═╝╚══════╝   ╚═╝   "
 echo ""
 echo -e "${BOLD}  RGB Keyboard Backlight Control — Setup Script${NC}"
-echo -e "${CYAN}  github.com/your-username/hp-kbd-backlight${NC}"
+echo -e "${CYAN}  github.com/spaceshipcode/hp-victus-omen-keyboard-rgb${NC}"
 echo ""
 echo -e "${NC}"
 
@@ -82,6 +82,7 @@ install_gui_deps() {
                 python3 python3-gi python3-gi-cairo \
                 gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gdkpixbuf-2.0 \
                 libgtk-4-dev libadwaita-1-dev \
+                dbus-x11 \
                 git build-essential dkms linux-headers-$(uname -r)
             ;;
         dnf)
@@ -168,26 +169,49 @@ install_kernel_module() {
     }
 
     cd "$TUXOV_DIR"
-    if [[ -f "install.sh" ]]; then
-        info "Running TUXOV install script..."
-        sudo bash install.sh
-    elif [[ -f "Makefile" ]]; then
-        info "Building module with DKMS..."
-        MODULE_VERSION=$(grep -r "^VERSION" Makefile 2>/dev/null | head -1 | awk -F= '{print $2}' | tr -d ' ' || echo "0.1")
-        sudo cp -r "$TUXOV_DIR" "/usr/src/hp-wmi-fan-${MODULE_VERSION}"
-        sudo dkms add -m hp-wmi-fan -v "$MODULE_VERSION"
-        sudo dkms build -m hp-wmi-fan -v "$MODULE_VERSION"
-        sudo dkms install -m hp-wmi-fan -v "$MODULE_VERSION"
-        sudo modprobe hp-wmi 2>/dev/null || true
+
+    # TUXOV repo uses 'make install-dkms' — this is the officially documented method
+    # It handles version detection internally via its own Makefile logic
+    if [[ -f "Makefile" ]]; then
+        info "Building and installing kernel module via DKMS (make install-dkms)..."
+        # First, make the module object to ensure it compiles
+        make || { warn "make failed — kernel module may not compile."; cd "$SCRIPT_DIR"; rm -rf "$TUXOV_DIR"; return 1; }
+        sudo make install-dkms || {
+            warn "DKMS install via Makefile failed. Trying manual DKMS method..."
+            # Fallback: extract version safely from dkms.conf or use fixed version
+            MODULE_VERSION="0.0.3"
+            if [[ -f "dkms.conf" ]]; then
+                RAW_VER=$(grep '^PACKAGE_VERSION' dkms.conf | cut -d= -f2 | tr -d ' "' | head -1)
+                # Only use if it looks like a plain version number (not a shell command)
+                if [[ "$RAW_VER" =~ ^[0-9]+\.[0-9]+ ]]; then
+                    MODULE_VERSION="$RAW_VER"
+                fi
+            fi
+            info "Using module version: $MODULE_VERSION"
+            sudo rm -rf "/usr/src/hp-wmi-fan-${MODULE_VERSION}" 2>/dev/null || true
+            sudo cp -r "$TUXOV_DIR" "/usr/src/hp-wmi-fan-${MODULE_VERSION}"
+            sudo dkms add -m hp-wmi-fan -v "$MODULE_VERSION" 2>/dev/null || true
+            sudo dkms build -m hp-wmi-fan -v "$MODULE_VERSION" || { warn "DKMS build failed."; cd "$SCRIPT_DIR"; rm -rf "$TUXOV_DIR"; return 1; }
+            sudo dkms install -m hp-wmi-fan -v "$MODULE_VERSION"
+        }
+    else
+        warn "No Makefile found in TUXOV repository. Cannot build kernel module."
+        cd "$SCRIPT_DIR"
+        rm -rf "$TUXOV_DIR"
+        return 1
     fi
+
+    # Load the module
+    sudo modprobe hp-wmi 2>/dev/null || true
 
     cd "$SCRIPT_DIR"
     rm -rf "$TUXOV_DIR"
 
-    if dkms status 2>/dev/null | grep -q "hp-wmi-fan\|hp_wmi"; then
+    if dkms status 2>/dev/null | grep -q "hp-wmi-fan" || lsmod | grep -q "hp_wmi"; then
         success "hp-wmi kernel module installed successfully."
     else
         warn "Module installation may have failed. Check: dkms status"
+        warn "You may need to reboot for the module to load."
     fi
 }
 
